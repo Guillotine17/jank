@@ -65,17 +65,20 @@ export class AppComponent implements OnInit {
   }
   loadingBar() {
     var loadingBarGroup = new THREE.Group();
-    var segmentCount = 50;
+    var segmentCount = 20;
+    var segmentLength = 40;
+    var segmentOffset = 10;
+    var segmentHeight = 10;
     for (let index = 0; index < segmentCount; index++) {
       var loadingThing = new THREE.Shape([
         new THREE.Vector2(0,0),
-        new THREE.Vector2(10, 0),
-        new THREE.Vector2(15, 10),
-        new THREE.Vector2(5, 10),
+        new THREE.Vector2(segmentLength - segmentOffset, 0),
+        new THREE.Vector2(segmentLength, segmentHeight),
+        new THREE.Vector2(segmentOffset, segmentHeight),
       ]);
       var loadingThingGeometry = new THREE.ShapeGeometry(loadingThing);
       var loadingThingMesh = new THREE.Mesh(loadingThingGeometry, this.numberService.materialON);
-      loadingThingMesh.position.x += (index * 12) - 6* segmentCount;
+      loadingThingMesh.position.x += (index * segmentLength) - .5* segmentLength * segmentCount;
       loadingBarGroup.add(loadingThingMesh);
     }
 
@@ -87,7 +90,7 @@ export class AppComponent implements OnInit {
     this.loadingBarGroup.children.forEach((child) => {
       child.position.x += .5;
       if (child.position.x > 400) {
-        child.position.x = -200;
+        child.position.x = -300;
       }
     })
   }
@@ -184,7 +187,7 @@ export class AppComponent implements OnInit {
   updateDigits = function() {
     this.digits.forEach((digit, index) => {
 
-      if (this.numberService.getRandomInt(100) < 1) {
+      if (this.numberService.getRandomInt(1000) < 1) {
         var newDigit = this.numberService.getRandomInt(10);
         digit.children.forEach((child, index) => {
           if (child.type === "Mesh") {
