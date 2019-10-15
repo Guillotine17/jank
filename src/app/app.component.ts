@@ -3,6 +3,10 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { GlitchPass } from 'three/examples/jsm/postprocessing/GlitchPass.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
+import { RGBShiftShader } from '../assets/shaders/rgbshiftShader.js';
+import { CopyShader } from '../assets/shaders/CopyShader.js';
+
 import { NumbersService } from './numbers.service';
 @Component({
   selector: 'app-root',
@@ -27,6 +31,8 @@ export class AppComponent implements OnInit {
     // this.camera.position.z = 25;
     this.camera.position.z = 150;
     this.renderer.setSize( window.innerWidth, window.innerHeight );
+    this.composer.setSize( window.innerWidth, window.innerHeight );
+    this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.setClearColor(0x111111, 1);
     document.body.appendChild( this.renderer.domElement );
     // handle resize window
@@ -46,8 +52,10 @@ export class AppComponent implements OnInit {
   handleResize = () => {
     const width = window.innerWidth;
     const height = window.innerHeight;
-    this.renderer.setSize(width,height);
-    this.camera.aspect = width/height;
+    this.renderer.setSize(width, height);
+    this.composer.setSize( window.innerWidth, window.innerHeight );
+    this.renderer.setPixelRatio(window.devicePixelRatio);
+    this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
   }
 
@@ -271,10 +279,18 @@ export class AppComponent implements OnInit {
       this.render();
   }
   addPasses = () => {
-    var renderPass = new RenderPass( this.scene, this.camera );
+    const renderPass = new RenderPass( this.scene, this.camera );
     this.composer.addPass( renderPass );
 
-    // var glitchPass = new GlitchPass(1080);
+    // const rgbshiftPass = new ShaderPass( RGBShiftShader );
+    // // rgbshiftPass.uniforms['amount'] = 0.0005;
+    // console.log(rgbshiftPass);
+    // this.composer.addPass( rgbshiftPass );
+
+    const copyPass = new ShaderPass( CopyShader );
+    this.composer.addPass( copyPass );
+
+    // var glitchPass = new GlitchPass();
     // this.composer.addPass( glitchPass );
   }
 
