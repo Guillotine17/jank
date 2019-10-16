@@ -235,7 +235,7 @@ export class AppComponent implements OnInit {
         });
       }
     });
-    this.flickerDigits();
+    // this.flickerDigits();
   };
 
   generateLilNumber(targetDigitGroup) {
