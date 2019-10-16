@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import * as THREE from 'three';
 import { generate } from 'rxjs';
-import { Geometry, Material, MeshBasicMaterial } from 'three';
+import { Geometry, Material, MeshBasicMaterial, MeshStandardMaterial } from 'three';
 
 @Injectable({
   providedIn: 'root'
@@ -9,10 +9,19 @@ import { Geometry, Material, MeshBasicMaterial } from 'three';
 export class NumbersService {
 
   constructor() { }
-  materialON: MeshBasicMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, name: "ON" });
-  materialOFF: MeshBasicMaterial = new THREE.MeshBasicMaterial({ color: 0x222222, side: THREE.DoubleSide, name: "OFF"  });
+  materialON: MeshBasicMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff,
+    side: THREE.DoubleSide,
+    name: 'ON',
+    emissive: new THREE.Color(0xffffff),
+    // emissiveMap: THREE.ImageUtils.loadTexture('assets/face.png')
+  });
+  materialOFF: MeshBasicMaterial = new THREE.MeshBasicMaterial({
+    color: 0x222222,
+    emissive: new THREE.Color(0x222222),
+    side: THREE.DoubleSide, name: 'OFF'
+  });
   digitLookup = [
-    //0
+    // 0
     {
         0: true,
         1: true,
@@ -26,7 +35,7 @@ export class NumbersService {
         9: true,
         10: true,
     },
-    //1
+    // 1
     {
         0: true,
         1: true,
@@ -34,7 +43,7 @@ export class NumbersService {
         3: true,
         4: true,
     },
-    //2
+    // 2
     {
         0: true,
         1: true,
@@ -46,7 +55,7 @@ export class NumbersService {
         10: true,
         11: true
     },
-    //3
+    // 3
     {
         4: true,
         5: true,
@@ -55,7 +64,7 @@ export class NumbersService {
         9: true,
         11: true
     },
-    //4
+    // 4
     {
         3: true,
         4: true,
@@ -64,7 +73,7 @@ export class NumbersService {
         8: true,
         9: true,
     },
-    //5
+    // 5
     {
         3: true,
         4: true,
@@ -74,7 +83,7 @@ export class NumbersService {
         9: true,
         10: true,
     },
-    //6
+    // 6
     {
         0: true,
         1: true,
@@ -88,7 +97,7 @@ export class NumbersService {
         10: true,
         11: true
     },
-    //7
+    // 7
     {
         0: true,
         1: true,
@@ -98,7 +107,7 @@ export class NumbersService {
         6: true,
         11: true
     },
-    //8
+    // 8
     {
         0: true,
         1: true,
@@ -113,7 +122,7 @@ export class NumbersService {
         10: true,
         11: true
     },
-    //9
+    // 9
     {
         2: true,
         3: true,
@@ -129,7 +138,7 @@ export class NumbersService {
 
   getDigitLookup = function() {
     return this.digitLookup;
-  }
+  };
   // materialON = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
   // materialOFF = new THREE.MeshBasicMaterial({ color: 0x222222, side: THREE.DoubleSide });
   public generateDigit = function(inputDigit) {
@@ -239,7 +248,7 @@ export class NumbersService {
                 new THREE.Vector2(0, 0),
                 new THREE.Vector2(15, 0),
                 new THREE.Vector2(25, 10),
-                new THREE.Vector2(0, 10)
+                new THREE.Vector2(10, 10)
             ]),
             position: new THREE.Vector3(15, 0, 0)
         },
@@ -264,14 +273,13 @@ export class NumbersService {
         }
     ];
     segments.forEach((segment, index) => {
-        console.log(index);
+        // console.log(index);
+        const scaleFactor = .95;
         const geometry = new THREE.ShapeGeometry(segment.vertices);
-        console.log(geometry);
         geometry.computeBoundingBox();
-
-        geometry.scale(.95, .95, 1);
-        // geometry.center();
-        geometry.translate(segment.position.x, segment.position.y, segment.position.z);
+        const centerScaleResult = this.centerScale(geometry.boundingBox, scaleFactor);
+        geometry.scale(scaleFactor, scaleFactor, 1);
+        geometry.translate(centerScaleResult.x + segment.position.x, centerScaleResult.y + segment.position.y, segment.position.z);
 
         // const materialToUse = (this.digitLookup[inputDigit][index]) ? this.materialON : this.materialOFF;
         const segmentMesh = new THREE.Mesh(geometry, this.materialON);
@@ -333,27 +341,28 @@ export class NumbersService {
     }
     const lilNumberGroup = new THREE.Group();
     const lilNumberGeometry = this.generateLilNumber(7);
-    console.log(lilNumberGeometry);
     lilNumberGroup.add(new THREE.Mesh(lilNumberGeometry, this.materialON));
     digitGroup.add(lilNumberGroup);
     return digitGroup;
-  }
+  };
 
-  addVectors = function(vector1, vector2) {
+  addVectors(vector1, vector2) {
     return {
       x: vector1.x + vector2.x,
       y: vector1.y + vector2.y,
       z: vector1.z + vector2.z
     };
   }
-  getRandomInt = function(max) {
+
+  getRandomInt(max) {
     return Math.floor(Math.random() * Math.floor(max));
   }
+
   generateLilNumber(digit) {
-    var loader = new THREE.FontLoader();
-    loader.load( '/assets/droid_sans_mono_regular.typeface.json', function ( font ) {
-      var textGeometry =  new THREE.TextGeometry( '0' + String(digit), {
-        font: font,
+    const loader = new THREE.FontLoader();
+    loader.load( '/assets/droid_sans_mono_regular.typeface.json', (font) => {
+      const textGeometry =  new THREE.TextGeometry( '0' + String(digit), {
+        font,
         size: 80,
         height: 5,
         curveSegments: 12,
@@ -365,5 +374,12 @@ export class NumbersService {
       } );
       return textGeometry;
     });
+  }
+  centerScale(boundingBox, scaleFactor) {
+    const multiplier = (1 - scaleFactor) / 2;
+    return {
+      x: (multiplier * (boundingBox.max.x - boundingBox.min.x)),
+      y: multiplier * (boundingBox.max.y - boundingBox.min.y),
+    };
   }
 }
