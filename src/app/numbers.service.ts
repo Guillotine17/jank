@@ -12,12 +12,12 @@ export class NumbersService {
   materialON: MeshBasicMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff,
     side: THREE.DoubleSide,
     name: 'ON',
-    emissive: new THREE.Color(0xffffff),
+    // emissive: new THREE.Color(0xffffff),
     // emissiveMap: THREE.ImageUtils.loadTexture('assets/face.png')
   });
   materialOFF: MeshBasicMaterial = new THREE.MeshBasicMaterial({
     color: 0x222222,
-    emissive: new THREE.Color(0x222222),
+    // emissive: new THREE.Color(0x222222),
     side: THREE.DoubleSide, name: 'OFF'
   });
   digitLookup = [
