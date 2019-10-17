@@ -14,8 +14,12 @@ import { VerticalBlurShader } from 'three/examples/jsm/shaders/VerticalBlurShade
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass';
 import { RectAreaLightUniformsLib } from 'three/examples/jsm/lights/RectAreaLightUniformsLib.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { NumbersService } from './numbers.service';
-import { Vec2 } from 'three';
+import { NumbersService } from './services/numbers.service';
+import { TextcanvasComponent } from './textcanvas/textcanvas.component';
+import { Vec2, ShapeGeometry, ExtrudeBufferGeometry, Line3 } from 'three';
+import { WireframeGeometry2 } from 'three/examples/jsm/lines/WireframeGeometry2';
+import { Wireframe } from 'three/examples/jsm/lines/Wireframe';
+import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial';
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
@@ -30,13 +34,15 @@ export class AppComponent implements OnInit {
   controls = new OrbitControls( this.camera, this.renderer.domElement );
 
   group = new THREE.Group();
-  digits = [];
+  digits: THREE.Group[] = [];
+  skullies = [];
   flickerCells = [];
   digitLookup = [];
   timeShaders = [];
   frame = 0;
-  digitCount = 5;
+  digitCount = 9;
   loadingBarGroup = null;
+  bloomPassEnabled = false;
   rgbShiftPassEnabled = true;
   scanlinePassEnabled = false;
   glitchPassEnabled = false;
@@ -52,7 +58,7 @@ export class AppComponent implements OnInit {
     this.renderer.setSize( window.innerWidth, window.innerHeight );
     this.composer.setSize( window.innerWidth, window.innerHeight );
     this.renderer.setPixelRatio(window.devicePixelRatio);
-    this.renderer.setClearColor(0x111111, 1);
+    this.renderer.setClearColor(0x7fffd4, 1);
     document.body.appendChild( this.renderer.domElement );
     // document.body.appendChild( this.glowRenderer.domElement );
     // handle resize window
@@ -65,20 +71,39 @@ export class AppComponent implements OnInit {
     //   this.generateLilNumber(digit);
     // });
     this.loadingBar();
-    for (let xIndex = -400; xIndex < 400; xIndex += 30) {
-      for (let yIndex = -400; yIndex < 400; yIndex += 30) {
-        this.generateSkullWidget(new THREE.Vector2(xIndex, yIndex)); 
+    for (let xIndex = -200; xIndex < 200; xIndex += 30) {
+      for (let yIndex = -200; yIndex < 200; yIndex += 30) {
+        this.generateSkullWidget(new THREE.Vector2(xIndex, yIndex));
       }
     }
     this.backgroundShape();
+    this.drawGameboy();
+    // this.addCanvasPlane();
     this.addPasses();
-    this.animate();
-    // this.addAmbientLight();
     this.digitLookup = this.numberService.getDigitLookup();
+    this.animate();
+    this.addAmbientLight();
     // this.addRectLight();
   }
+  updateSkulls() {
+    const skullBlinkFrequency = 30;
+    const addSkullFrequency = 50;
+    if (this.frame % addSkullFrequency === 0) {
+      const randomSkull = this.skullies[this.numberService.getRandomInt(this.skullies.length)];
+      if (!randomSkull.userData.blinking) {
+        randomSkull.userData.blinking = true;
+      }
+    }
+    if (this.frame % skullBlinkFrequency === 0) {
+      this.skullies.filter((skull) => {
+        return skull.userData.blinking;
+      }).forEach((skull) => {
+        skull.visible = !skull.visible;
+      });
+    }
+  }
   addAmbientLight() {
-    const ambient = new THREE.AmbientLight( 0xffffff, 4 );
+    const ambient = new THREE.AmbientLight( 0xffffff, 2 );
     this.scene.add(ambient);
   }
   handleResize = () => {
@@ -103,7 +128,7 @@ export class AppComponent implements OnInit {
   }
   loadingBar() {
     const loadingBarGroup = new THREE.Group();
-    const segmentCount = 20;
+    const segmentCount = 17;
     const segmentLength = 40;
     const segmentOffset = 10;
     const segmentHeight = 10;
@@ -119,14 +144,59 @@ export class AppComponent implements OnInit {
       loadingThingMesh.position.x += (index * segmentLength) - .5 * segmentLength * segmentCount;
       loadingBarGroup.add(loadingThingMesh);
     }
-
     loadingBarGroup.position.y -= 20;
     this.loadingBarGroup = loadingBarGroup;
     this.scene.add(loadingBarGroup);
   }
+  drawGameboy() {
+    const frameShape = new THREE.Shape([
+      new THREE.Vector2(-220, -400),
+      new THREE.Vector2(220, -400),
+      new THREE.Vector2(220, 200),
+      new THREE.Vector2(-220, 200),
+    ]);
+    const windowShape = new THREE.Shape([
+      new THREE.Vector2(-200, -120),
+      new THREE.Vector2(200, -120),
+      new THREE.Vector2(200, 120),
+      new THREE.Vector2(-200, 120),
+    ]);
+    frameShape.holes.push(windowShape);
+    const extrudesettings = {
+      steps: 1,
+      depth: 100,
+      bevelEnabled: false
+    };
+    const backGeometry = new THREE.ShapeGeometry(windowShape);
+    backGeometry.translate(0, 0, -40);
+    this.scene.add(
+      new THREE.Mesh(backGeometry, new THREE.MeshBasicMaterial({color: 0x000000, side: THREE.DoubleSide}))
+    );
+    const frameGeometry = new ExtrudeBufferGeometry(frameShape, extrudesettings);
+    frameGeometry.translate(0, 0, -40);
+    // const wireframeGeo = new WireframeGeometry2( frameGeometry );
+
+    // const wireframe = new Wireframe(wireframeGeo, new LineMaterial( {
+    //   color: 0x222222,
+    //   linewidth: 1,
+    //   dashed: false
+    // }));
+    // wireframe.computeLineDistances();
+    // wireframe.scale.set(1, 1, 1);
+    // this.scene.add(wireframe);
+    const frameMesh = new THREE.Mesh(frameGeometry, new THREE.MeshStandardMaterial({
+      color: 0xD2B48C,
+      roughness: 1,
+      // metalness: 1,
+      // flatShading: true,
+    }));
+    this.scene.add(frameMesh);
+    console.log(frameMesh);
+
+  }
   backgroundShape() {
     const bevelSize = 30;
-    const width = 400;
+    const width = 360;
     const height = 200;
     const backdrop = new THREE.Shape([
       new THREE.Vector2(0, 0),
@@ -147,7 +217,7 @@ export class AppComponent implements OnInit {
     if (this.loadingBarGroup) {
       this.loadingBarGroup.children.forEach((child) => {
         child.position.x += .5;
-        if (child.position.x > 400) {
+        if (child.position.x > 380) {
           child.position.x = -300;
         }
       });
@@ -258,7 +328,11 @@ export class AppComponent implements OnInit {
   // game logic
   updateDigits = function() {
     this.digits.forEach((digit) => {
-      if (this.numberService.getRandomInt(1000) < 1) {
+      digit.translateX(1);
+      if (digit.position.x > 300 ) {
+        digit.translateX(-600);
+      // }
+      // if (this.numberService.getRandomInt(1000) < 2) {
         const newDigit = this.numberService.getRandomInt(10);
         digit.userData.digit = newDigit;
         digit.children.forEach((child, digitChildIndex) => {
@@ -332,6 +406,7 @@ export class AppComponent implements OnInit {
     this.updateDigits();
     this.updateLoadingBar();
     this.updateTimeShaders();
+    this.updateSkulls();
     this.frame += 1;
   }
 
@@ -343,7 +418,6 @@ export class AppComponent implements OnInit {
     this.composer.render();
   }
   generateSkullWidget(coords: Vec2) {
-    
     const skullShape = new THREE.Shape([
       new THREE.Vector2(2,0),
       new THREE.Vector2(4,0),
@@ -380,14 +454,17 @@ export class AppComponent implements OnInit {
       new THREE.Vector2(7,5),
       new THREE.Vector2(5,5),
     ]);
-    skullShape.holes.push(leftEye)
-    skullShape.holes.push(rightEye)
+    skullShape.holes.push(leftEye);
+    skullShape.holes.push(rightEye);
     console.log(skullShape);
     const skullGeometry = new THREE.ShapeGeometry(skullShape);
-    skullGeometry.scale(2,2,0);
+    skullGeometry.scale(2, 2, 0);
     skullGeometry.translate(coords.x, coords.y, 5);
-    const skullMesh = new THREE.Mesh(skullGeometry, new THREE.MeshBasicMaterial({ color: 0xff4444, transparent: true, opacity: 0.5 }));
+    const skullMesh = new THREE.Mesh(skullGeometry, new THREE.MeshBasicMaterial({ color: 0xff0012, transparent: true, opacity: 0.8 }));
     skullMesh.translateY(-30);
+    skullMesh.visible = false;
+    skullMesh.name = 'skull';
+    this.skullies.push(skullMesh);
     this.scene.add(skullMesh);
   }
 
@@ -397,10 +474,12 @@ export class AppComponent implements OnInit {
 
     // const additivePass = new ShaderPass(AdditiveShader);
     // this.composer.addPass(additivePass);
-    const bloomPass = new UnrealBloomPass( new THREE.Vector2( window.innerWidth, window.innerHeight ), 1.5, 0.4, 0.85 );
-    bloomPass.strength = .3;
-    bloomPass.threshold = .4;
-    this.composer.addPass(bloomPass);
+    if (this.bloomPassEnabled) {
+      const bloomPass = new UnrealBloomPass( new THREE.Vector2( window.innerWidth, window.innerHeight ), 1.5, 0.4, 0.85 );
+      bloomPass.strength = .3;
+      bloomPass.threshold = .2;
+      this.composer.addPass(bloomPass);
+    }
 
     if (this.glitchPassEnabled) {
       const glitchPass = new GlitchPass();
@@ -420,11 +499,4 @@ export class AppComponent implements OnInit {
       this.timeShaders.push(scanlinePass);
     }
   }
-
-
-
-
-
-
-
 }
