@@ -42,7 +42,7 @@ export class AppComponent implements OnInit {
   frame = 0;
   digitCount = 9;
   loadingBarGroup = null;
-  bloomPassEnabled = false;
+  bloomPassEnabled = true;
   rgbShiftPassEnabled = true;
   scanlinePassEnabled = false;
   glitchPassEnabled = false;
@@ -103,7 +103,7 @@ export class AppComponent implements OnInit {
     }
   }
   addAmbientLight() {
-    const ambient = new THREE.AmbientLight( 0xffffff, 2 );
+    const ambient = new THREE.AmbientLight( 0xffffff, 1 );
     this.scene.add(ambient);
   }
   handleResize = () => {
@@ -149,11 +149,16 @@ export class AppComponent implements OnInit {
     this.scene.add(loadingBarGroup);
   }
   drawGameboy() {
+    const bevel = 30;
     const frameShape = new THREE.Shape([
-      new THREE.Vector2(-220, -400),
-      new THREE.Vector2(220, -400),
-      new THREE.Vector2(220, 200),
-      new THREE.Vector2(-220, 200),
+      new THREE.Vector2(-220 + bevel, -400),
+      new THREE.Vector2(220 - bevel, -400),
+      new THREE.Vector2(220, -400 + bevel),
+      new THREE.Vector2(220, 200 - bevel),
+      new THREE.Vector2(220 - bevel, 200),
+      new THREE.Vector2(-220 + bevel, 200),
+      new THREE.Vector2(-220, 200 - bevel),
+      new THREE.Vector2(-220, -400 + bevel),      
     ]);
     const windowShape = new THREE.Shape([
       new THREE.Vector2(-200, -120),
