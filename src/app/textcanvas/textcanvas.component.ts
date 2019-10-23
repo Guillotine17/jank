@@ -26,7 +26,7 @@ export class TextcanvasComponent implements AfterViewInit {
     console.log(ctx);
     ctx.clearRect(0, 0, 100, 100);
     ctx.font = '20px Georgia';
-    ctx.fillStyle = "rgb(0,150,0)";
+    ctx.fillStyle = 'rgb(0,150,0)';
     ctx.fillText('Hoes Mad!', 12, 50);
 
     this.addCanvasPlane();

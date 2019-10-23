@@ -15,11 +15,10 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { RectAreaLightUniformsLib } from 'three/examples/jsm/lights/RectAreaLightUniformsLib.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { NumbersService } from './services/numbers.service';
-import { TextcanvasComponent } from './textcanvas/textcanvas.component';
 import { Vec2, ShapeGeometry, ExtrudeBufferGeometry, Line3 } from 'three';
-import { WireframeGeometry2 } from 'three/examples/jsm/lines/WireframeGeometry2';
-import { Wireframe } from 'three/examples/jsm/lines/Wireframe';
-import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial';
+import { WidgetService } from './services/widget.service.js';
+import { ChunkytextService } from './services/chunkytext.service.js';
+
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
@@ -42,15 +41,17 @@ export class AppComponent implements OnInit {
   frame = 0;
   digitCount = 9;
   loadingBarGroup = null;
-  bloomPassEnabled = true;
+  bloomPassEnabled = false;
   rgbShiftPassEnabled = true;
   scanlinePassEnabled = false;
   glitchPassEnabled = false;
+  typerGroup: THREE.Group = null;
 
-  constructor(private numberService: NumbersService) { }
+  constructor(private numberService: NumbersService,
+              private chunkyText: ChunkytextService,
+              private widgetService: WidgetService) { }
 
   ngOnInit() {
-
     // this.camera.position.z = 25;
     RectAreaLightUniformsLib.init();
     this.camera.position.z = 150;
@@ -66,40 +67,34 @@ export class AppComponent implements OnInit {
       this.handleResize();
     });
     // this.addSomeStuff();
-    this.addNumbers(65);
+    // this.addNumbers(65);
     // this.digits.forEach((digit) => {
     //   this.generateLilNumber(digit);
     // });
-    this.loadingBar();
-    for (let xIndex = -200; xIndex < 200; xIndex += 30) {
-      for (let yIndex = -200; yIndex < 200; yIndex += 30) {
-        this.generateSkullWidget(new THREE.Vector2(xIndex, yIndex));
-      }
-    }
-    this.backgroundShape();
-    this.drawGameboy();
+    // this.loadingBarGroup = this.widgetService.loadingBar(this.scene);
+    // this.generateSkullGrid();
+    // this.scene.add(this.chunkyText.generateCharacter('a'));
+    this.typerGroup = this.chunkyText.initTyper({message: '"here\'s and interesting quote about something cool"-quote sayer.'});
+    this.scene.add(this.typerGroup);
+    this.widgetService.backgroundShape(this.scene);
+    // this.widgetService.drawGameboy(this.scene);
+
     // this.addCanvasPlane();
+
     this.addPasses();
     this.digitLookup = this.numberService.getDigitLookup();
     this.animate();
     this.addAmbientLight();
-    // this.addRectLight();
   }
-  updateSkulls() {
-    const skullBlinkFrequency = 30;
-    const addSkullFrequency = 50;
-    if (this.frame % addSkullFrequency === 0) {
-      const randomSkull = this.skullies[this.numberService.getRandomInt(this.skullies.length)];
-      if (!randomSkull.userData.blinking) {
-        randomSkull.userData.blinking = true;
+
+  generateSkullGrid() {
+    for (let xIndex = -200; xIndex < 200; xIndex += 30) {
+      for (let yIndex = -200; yIndex < 200; yIndex += 30) {
+        this.skullies.push(this.widgetService.generateSkullWidget({
+          coords: new THREE.Vector2(xIndex, yIndex),
+          scene: this.scene
+        }));
       }
-    }
-    if (this.frame % skullBlinkFrequency === 0) {
-      this.skullies.filter((skull) => {
-        return skull.userData.blinking;
-      }).forEach((skull) => {
-        skull.visible = !skull.visible;
-      });
     }
   }
   addAmbientLight() {
@@ -123,283 +118,8 @@ export class AppComponent implements OnInit {
       digitMesh.position.x += (index * digitWidth) - (.5 * digitWidth * this.digitCount);
       this.digits.push(digitMesh);
       this.scene.add(digitMesh);
-      this.generateLilNumber(digitMesh);
     }
   }
-  loadingBar() {
-    const loadingBarGroup = new THREE.Group();
-    const segmentCount = 17;
-    const segmentLength = 40;
-    const segmentOffset = 10;
-    const segmentHeight = 10;
-    for (let index = 0; index < segmentCount; index++) {
-      const loadingThing = new THREE.Shape([
-        new THREE.Vector2(0, 0),
-        new THREE.Vector2(segmentLength - segmentOffset, 0),
-        new THREE.Vector2(segmentLength, segmentHeight),
-        new THREE.Vector2(segmentOffset, segmentHeight),
-      ]);
-      const loadingThingGeometry = new THREE.ShapeGeometry(loadingThing);
-      const loadingThingMesh = new THREE.Mesh(loadingThingGeometry, this.numberService.materialON);
-      loadingThingMesh.position.x += (index * segmentLength) - .5 * segmentLength * segmentCount;
-      loadingBarGroup.add(loadingThingMesh);
-    }
-    loadingBarGroup.position.y -= 20;
-    this.loadingBarGroup = loadingBarGroup;
-    this.scene.add(loadingBarGroup);
-  }
-  drawGameboy() {
-    const bevel = 30;
-    const frameShape = new THREE.Shape([
-      new THREE.Vector2(-220 + bevel, -400),
-      new THREE.Vector2(220 - bevel, -400),
-      new THREE.Vector2(220, -400 + bevel),
-      new THREE.Vector2(220, 200 - bevel),
-      new THREE.Vector2(220 - bevel, 200),
-      new THREE.Vector2(-220 + bevel, 200),
-      new THREE.Vector2(-220, 200 - bevel),
-      new THREE.Vector2(-220, -400 + bevel),      
-    ]);
-    const windowShape = new THREE.Shape([
-      new THREE.Vector2(-200, -120),
-      new THREE.Vector2(200, -120),
-      new THREE.Vector2(200, 120),
-      new THREE.Vector2(-200, 120),
-    ]);
-    frameShape.holes.push(windowShape);
-    const extrudesettings = {
-      steps: 1,
-      depth: 100,
-      bevelEnabled: false
-    };
-    const backGeometry = new THREE.ShapeGeometry(windowShape);
-    backGeometry.translate(0, 0, -40);
-    this.scene.add(
-      new THREE.Mesh(backGeometry, new THREE.MeshBasicMaterial({color: 0x000000, side: THREE.DoubleSide}))
-    );
-    const frameGeometry = new ExtrudeBufferGeometry(frameShape, extrudesettings);
-    frameGeometry.translate(0, 0, -40);
-    // const wireframeGeo = new WireframeGeometry2( frameGeometry );
-
-    // const wireframe = new Wireframe(wireframeGeo, new LineMaterial( {
-    //   color: 0x222222,
-    //   linewidth: 1,
-    //   dashed: false
-    // }));
-    // wireframe.computeLineDistances();
-    // wireframe.scale.set(1, 1, 1);
-    // this.scene.add(wireframe);
-    const frameMesh = new THREE.Mesh(frameGeometry, new THREE.MeshStandardMaterial({
-      color: 0xD2B48C,
-      roughness: 1,
-      // metalness: 1,
-      // flatShading: true,
-    }));
-    this.scene.add(frameMesh);
-    console.log(frameMesh);
-
-  }
-  backgroundShape() {
-    const bevelSize = 30;
-    const width = 360;
-    const height = 200;
-    const backdrop = new THREE.Shape([
-      new THREE.Vector2(0, 0),
-      new THREE.Vector2(width - bevelSize, 0),
-      new THREE.Vector2(width, bevelSize),
-      new THREE.Vector2(width, height - bevelSize),
-      new THREE.Vector2(width - bevelSize, height),
-      new THREE.Vector2(bevelSize, height),
-      new THREE.Vector2(0, height - bevelSize),
-      // new THREE.Vector2(0, bevelSize),
-    ]);
-    const backdropGeometry = new THREE.ShapeGeometry(backdrop);
-    backdropGeometry.translate((-.5 * width), (-.5*height), -10);
-    const backdropMesh = new THREE.Mesh(backdropGeometry, new THREE.MeshBasicMaterial({ color: 0x555555 }));
-    this.scene.add(backdropMesh);
-  }
-  updateLoadingBar() {
-    if (this.loadingBarGroup) {
-      this.loadingBarGroup.children.forEach((child) => {
-        child.position.x += .5;
-        if (child.position.x > 380) {
-          child.position.x = -300;
-        }
-      });
-    }
-  }
-  addRectLight() {
-    const width = 10;
-    const height = 10;
-    const intensity = 100;
-    const rectLight = new THREE.RectAreaLight( 0xffffff, intensity,  width, height );
-    rectLight.position.set( 5, 5, 10 );
-    rectLight.lookAt( 0, 0, 0 );
-    this.scene.add( rectLight );
-
-
-    const rectLightHelper = new THREE.RectAreaLightHelper( rectLight );
-    rectLight.add( rectLightHelper );
-  }
-  addSomeStuff() {
-    let debug = false;
-
-    // create cube
-    const geometry = new THREE.BoxGeometry(7, 7, 7);
-    // materials/color/texture
-
-    // box and square together
-    const boxAndSquare = new THREE.Group();
-
-    const faceMaterials = [
-      new THREE.MeshBasicMaterial({
-        map: new THREE.TextureLoader().load('assets/face.png'),
-        side: THREE.DoubleSide
-      }),
-      new THREE.MeshBasicMaterial({
-        map: new THREE.TextureLoader().load('assets/face.png'),
-        side: THREE.DoubleSide
-      }),
-      new THREE.MeshBasicMaterial({
-        map: new THREE.TextureLoader().load('assets/face.png'),
-        side: THREE.DoubleSide
-      }),
-      new THREE.MeshBasicMaterial({
-        map: new THREE.TextureLoader().load('assets/face.png'),
-        side: THREE.DoubleSide
-      }),
-      new THREE.MeshBasicMaterial({
-        map: new THREE.TextureLoader().load('assets/face.png'),
-        side: THREE.DoubleSide
-      }),
-      new THREE.MeshBasicMaterial({
-        map: new THREE.TextureLoader().load('assets/face.png'),
-        side: THREE.DoubleSide
-      }),
-
-    ];
-    // var material = new THREE.MeshBasicMaterial(faceMaterials)
-    const cube = new THREE.Mesh(geometry, faceMaterials);
-
-    // scene.add(cube);
-
-    const lineMaterial = new THREE.LineBasicMaterial( { color: 0x0000ff } );
-    const lineGeometry = new THREE.Geometry();
-    lineGeometry.vertices.push(new THREE.Vector3( -10, 0, 0) );
-    lineGeometry.vertices.push(new THREE.Vector3( 0, 10, 0) );
-    lineGeometry.vertices.push(new THREE.Vector3( 10, 0, 0) );
-    lineGeometry.vertices.push(new THREE.Vector3( 0, -10, 0) );
-    lineGeometry.vertices.push(new THREE.Vector3( -10, 0, 0) );
-    const line = new THREE.Line( lineGeometry, lineMaterial );
-    // scene.add( line );
-
-    this.group.add(cube);
-    this.group.add(line);
-    this.scene.add(this.group);
-
-    const lineGeometry2 = new THREE.Geometry();
-    lineGeometry2.vertices.push(new THREE.Vector3( -10, 0, 0) );
-    lineGeometry2.vertices.push(new THREE.Vector3( 0, 0, 10) );
-    lineGeometry2.vertices.push(new THREE.Vector3( 10, 0, 0) );
-    lineGeometry2.vertices.push(new THREE.Vector3( 0, 0, -10) );
-    lineGeometry2.vertices.push(new THREE.Vector3( -10, 0, 0) );
-    const line2 = new THREE.Line(lineGeometry2, new THREE.LineBasicMaterial({ color: 0x00ff00 }));
-    this.group.add(line2);
-
-
-    const lineGeometry3 = new THREE.Geometry();
-    lineGeometry3.vertices.push(new THREE.Vector3( 0, 10, 0) );
-    lineGeometry3.vertices.push(new THREE.Vector3( 0, 0, -10) );
-    lineGeometry3.vertices.push(new THREE.Vector3( 0, -10, 0) );
-    lineGeometry3.vertices.push(new THREE.Vector3( 0, 0, 10) );
-    lineGeometry3.vertices.push(new THREE.Vector3( 0, 10, 0) );
-    const line3 = new THREE.Line(lineGeometry3, new THREE.LineBasicMaterial({ color: 0xff0000 }));
-    this.group.add(line3);
-
-
-    const PlaneGeometry = new THREE.PlaneGeometry( 90, 70 );
-    const planeMaterial = new THREE.MeshBasicMaterial( { map: new THREE.TextureLoader().load('assets/kiss.jpeg'), side: THREE.DoubleSide} );
-    const plane = new THREE.Mesh( PlaneGeometry, planeMaterial );
-    plane.position.z -= 40;
-    this.scene.add( plane );
-
-    if (debug) {
-        const axesHelper = new THREE.AxesHelper( 5 );
-        this.scene.add( axesHelper );
-    }
-  }
-
-
-  // game logic
-  updateDigits = function() {
-    this.digits.forEach((digit) => {
-      digit.translateX(1);
-      if (digit.position.x > 300 ) {
-        digit.translateX(-600);
-      // }
-      // if (this.numberService.getRandomInt(1000) < 2) {
-        const newDigit = this.numberService.getRandomInt(10);
-        digit.userData.digit = newDigit;
-        digit.children.forEach((child, digitChildIndex) => {
-          if (child.type === 'Mesh') {
-            if (this.digitLookup[newDigit][digitChildIndex]) {
-              child.visible = true;
-            } else {
-              child.visible = false;
-            }
-          }
-        });
-        this.generateLilNumber(digit);
-      }
-    });
-    // this.flickerDigits();
-  };
-
-  generateLilNumber(targetDigitGroup) {
-    const existingLN = targetDigitGroup.getObjectByName('lilNumber');
-    const loader = new THREE.FontLoader();
-    const localScene = this.scene;
-    const materialOn = new THREE.MeshBasicMaterial({color: 0xffffff});
-    loader.load( '/assets/droid_sans_mono_regular.typeface.json', ( font ) => {
-      const textGeometry =  new THREE.TextGeometry( '0' + String(targetDigitGroup.userData.digit), {
-        font,
-        size: 5,
-        height: 0.1,
-        bevelEnabled: false,
-      } );
-      textGeometry.rotateZ(1.5708);
-      textGeometry.translate(58, 67, 0);
-      let lilNumberGroup = new THREE.Group();
-      if (existingLN) {
-        lilNumberGroup = existingLN;
-      }
-      if (existingLN) {
-        existingLN.remove(existingLN.children[0]);
-      }
-      lilNumberGroup.add(new THREE.Mesh(textGeometry, materialOn));
-      lilNumberGroup.name = 'lilNumber';
-      if (!existingLN) {
-        targetDigitGroup.add(lilNumberGroup);
-      }
-      // localScene.add(numberMesh);
-    });
-  }
-  flickerDigits = function() {
-    // flicker stuff
-    if (this.numberService.getRandomInt(100) < 3) {
-      const digit = this.digits[this.numberService.getRandomInt(this.digits.length)];
-      const flickerCell = digit.children[this.numberService.getRandomInt(11)];
-      this.flickerCells.push(flickerCell);
-    }
-    if (this.frame % 10 === 0) {
-      this.flickerCells.forEach((flickerCell) => {
-        flickerCell.material = flickerCell.material.name === 'OFF' ? this.numberService.materialON : this.numberService.materialOFF;
-      });
-    }
-    if (this.numberService.getRandomInt(100) < 5 && this.flickerCells.length) {
-      this.flickerCells.shift();
-    }
-  };
 
   updateTimeShaders() {
     this.timeShaders.forEach((timeShader) => {
@@ -408,10 +128,12 @@ export class AppComponent implements OnInit {
   }
 
   update = () => {
-    this.updateDigits();
-    this.updateLoadingBar();
+    // this.numberService.updateDigits(this.digits);
+    // this.widgetService.updateLoadingBar(this.loadingBarGroup);
     this.updateTimeShaders();
-    this.updateSkulls();
+    // this.widgetService.updateSkulls({ frame: this.frame, skullies: this.skullies });
+    this.chunkyText.updateTyper(this.typerGroup, this.frame);
+
     this.frame += 1;
   }
 
@@ -422,56 +144,7 @@ export class AppComponent implements OnInit {
 
     this.composer.render();
   }
-  generateSkullWidget(coords: Vec2) {
-    const skullShape = new THREE.Shape([
-      new THREE.Vector2(2,0),
-      new THREE.Vector2(4,0),
-      new THREE.Vector2(4,1),
-      new THREE.Vector2(5,1),
-      new THREE.Vector2(5,2),
-      new THREE.Vector2(5,0),
-      new THREE.Vector2(6,0),
-      new THREE.Vector2(6,1),
-      new THREE.Vector2(7,1),
-      new THREE.Vector2(7,2),
-      new THREE.Vector2(8,2),
-      new THREE.Vector2(8,3),
-      new THREE.Vector2(8,6),
-      new THREE.Vector2(7,6),
-      new THREE.Vector2(7,7),
-      new THREE.Vector2(1,7),
-      new THREE.Vector2(1,6),
-      new THREE.Vector2(0,6),
-      new THREE.Vector2(0,2),
-      new THREE.Vector2(1,2),
-      new THREE.Vector2(1,1),
-      new THREE.Vector2(2,1)
-    ]);
-    const leftEye = new THREE.Shape([
-      new THREE.Vector2(1,3),
-      new THREE.Vector2(3,3),
-      new THREE.Vector2(3,5),
-      new THREE.Vector2(1,5),
-    ]);
-    const rightEye = new THREE.Shape([
-      new THREE.Vector2(5,3),
-      new THREE.Vector2(7,3),
-      new THREE.Vector2(7,5),
-      new THREE.Vector2(5,5),
-    ]);
-    skullShape.holes.push(leftEye);
-    skullShape.holes.push(rightEye);
-    console.log(skullShape);
-    const skullGeometry = new THREE.ShapeGeometry(skullShape);
-    skullGeometry.scale(2, 2, 0);
-    skullGeometry.translate(coords.x, coords.y, 5);
-    const skullMesh = new THREE.Mesh(skullGeometry, new THREE.MeshBasicMaterial({ color: 0xff0012, transparent: true, opacity: 0.8 }));
-    skullMesh.translateY(-30);
-    skullMesh.visible = false;
-    skullMesh.name = 'skull';
-    this.skullies.push(skullMesh);
-    this.scene.add(skullMesh);
-  }
+
 
   addPasses = () => {
     const renderPass = new RenderPass( this.scene, this.camera );

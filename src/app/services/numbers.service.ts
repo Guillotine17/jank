@@ -284,9 +284,9 @@ export class NumbersService {
         // const materialToUse = (this.digitLookup[inputDigit][index]) ? this.materialON : this.materialOFF;
         const segmentMesh = new THREE.Mesh(geometry, this.materialON);
         segmentMesh.visible = (this.digitLookup[inputDigit][index]) ? true : false;
-
-        segmentMesh.material['opacity'] = 0.9;
-        segmentMesh.material['transparent'] = true;
+        segmentMesh.material = segmentMesh.material as THREE.MeshBasicMaterial; // jfc
+        segmentMesh.material.opacity = 0.9;
+        segmentMesh.material.transparent = true;
         digitGroup.add(segmentMesh);
 
         const offGeometry = geometry.clone();
@@ -340,7 +340,7 @@ export class NumbersService {
         });
     }
     const lilNumberGroup = new THREE.Group();
-    const lilNumberGeometry = this.generateLilNumber(7);
+    const lilNumberGeometry = this.generateLilNumber(digitGroup);
     lilNumberGroup.add(new THREE.Mesh(lilNumberGeometry, this.materialON));
     digitGroup.add(lilNumberGroup);
     return digitGroup;
@@ -358,21 +358,54 @@ export class NumbersService {
     return Math.floor(Math.random() * Math.floor(max));
   }
 
-  generateLilNumber(digit) {
+  updateDigits = function(digits: THREE.Group[]) {
+    digits.forEach((digit) => {
+      digit.translateX(1);
+      if (digit.position.x > 300 ) {
+        digit.translateX(-600);
+      // }
+      // if (this.numberService.getRandomInt(1000) < 2) {
+        const newDigit = this.getRandomInt(10);
+        digit.userData.digit = newDigit;
+        digit.children.forEach((child, digitChildIndex) => {
+          if (child.type === 'Mesh') {
+            if (this.digitLookup[newDigit][digitChildIndex]) {
+              child.visible = true;
+            } else {
+              child.visible = false;
+            }
+          }
+        });
+        this.generateLilNumber(digit);
+      }
+    });
+    // this.flickerDigits();
+  };
+  generateLilNumber(targetDigitGroup) {
+    const existingLN = targetDigitGroup.getObjectByName('lilNumber');
     const loader = new THREE.FontLoader();
-    loader.load( '/assets/droid_sans_mono_regular.typeface.json', (font) => {
-      const textGeometry =  new THREE.TextGeometry( '0' + String(digit), {
+    const materialOn = new THREE.MeshBasicMaterial({color: 0xffffff});
+    loader.load( '/assets/droid_sans_mono_regular.typeface.json', ( font ) => {
+      const textGeometry =  new THREE.TextGeometry( '0' + String(targetDigitGroup.userData.digit), {
         font,
-        size: 80,
-        height: 5,
-        curveSegments: 12,
-        bevelEnabled: true,
-        bevelThickness: 10,
-        bevelSize: 8,
-        bevelOffset: 0,
-        bevelSegments: 5
+        size: 5,
+        height: 0.1,
+        bevelEnabled: false,
       } );
-      return textGeometry;
+      textGeometry.rotateZ(1.5708);
+      textGeometry.translate(58, 67, 0);
+      let lilNumberGroup = new THREE.Group();
+      if (existingLN) {
+        lilNumberGroup = existingLN;
+      }
+      if (existingLN) {
+        existingLN.remove(existingLN.children[0]);
+      }
+      lilNumberGroup.add(new THREE.Mesh(textGeometry, materialOn));
+      lilNumberGroup.name = 'lilNumber';
+      if (!existingLN) {
+        targetDigitGroup.add(lilNumberGroup);
+      }
     });
   }
   centerScale(boundingBox, scaleFactor) {
@@ -382,4 +415,20 @@ export class NumbersService {
       y: multiplier * (boundingBox.max.y - boundingBox.min.y),
     };
   }
+  flickerDigits = function() {
+    // flicker stuff
+    if (this.numberService.getRandomInt(100) < 3) {
+      const digit = this.digits[this.numberService.getRandomInt(this.digits.length)];
+      const flickerCell = digit.children[this.numberService.getRandomInt(11)];
+      this.flickerCells.push(flickerCell);
+    }
+    if (this.frame % 10 === 0) {
+      this.flickerCells.forEach((flickerCell) => {
+        flickerCell.material = flickerCell.material.name === 'OFF' ? this.numberService.materialON : this.numberService.materialOFF;
+      });
+    }
+    if (this.numberService.getRandomInt(100) < 5 && this.flickerCells.length) {
+      this.flickerCells.shift();
+    }
+  };
 }
