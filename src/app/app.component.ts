@@ -74,7 +74,7 @@ export class AppComponent implements OnInit {
     // this.loadingBarGroup = this.widgetService.loadingBar(this.scene);
     // this.generateSkullGrid();
     // this.scene.add(this.chunkyText.generateCharacter('a'));
-    this.typerGroup = this.chunkyText.initTyper({message: '"here\'s and interesting quote about something cool"-quote sayer.'});
+    this.typerGroup = this.chunkyText.initTyper({message: 'abcdefghijklmnopqrstuvwxyz 0123456789 .\'"-'});
     this.scene.add(this.typerGroup);
     this.widgetService.backgroundShape(this.scene);
     // this.widgetService.drawGameboy(this.scene);

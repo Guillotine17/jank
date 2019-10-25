@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import * as THREE from 'three';
 import { Vector2, Geometry } from 'three';
 import { not } from '@angular/compiler/src/output/output_ast';
+// import { moveCursor } from 'readline';
 
 @Injectable({
   providedIn: 'root'
@@ -19,26 +20,9 @@ export class ChunkytextService {
       typerGroup.userData.xpos = 0;
       typerGroup.userData.ypos = 0;
       typerGroup.userData.index = 0;
-      // for (let index = 0; index < typerGroup.userData.charstring.length; index++) {
-      //   const character = typerGroup.userData.charstring.substr(index, 1);
-      //   if (typerGroup.userData.xpos > typerGroup.userData.lineLength) {
-      //     typerGroup.userData.xpos = 0;
-      //     typerGroup.userData.ypos += 1;
-      //   }
-      //   if (character === '\n') {
-      //     typerGroup.userData.xpos = 0;
-      //     typerGroup.userData.ypos += 1;
-      //   }
-
-      //   const charMesh = this.generateCharacter(character);
-      //   if (charMesh) {
-      //     const lineOffset = -typerGroup.userData.ypos * 28;
-      //     charMesh.translateY(lineOffset + 50);
-      //     charMesh.translateX((typerGroup.userData.charWidth + typerGroup.userData.spacing) * typerGroup.userData.xpos - 150);
-      //   }
-      //   typerGroup.userData.xpos += 1;
-      //   typerGroup.add(charMesh);
-      // }
+      const cursor = this.generateCharacter('█');
+      typerGroup.add(cursor);
+      typerGroup.userData.cursor = cursor;
       return typerGroup;
   }
   addLetter(typerGroup) {
@@ -64,13 +48,50 @@ export class ChunkytextService {
     if (typerGroup.userData.index > typerGroup.userData.charstring.length) {
       typerGroup.userData.done = true;
     }
+    this.moveCursor(typerGroup);
+  }
+  moveCursor(typerGroup: THREE.Group) {
+    let xpos = typerGroup.userData.xpos;
+    let ypos = typerGroup.userData.ypos; 
+    let xypos = {x: null, y: null};
+    if (typerGroup.userData.xpos > typerGroup.userData.lineLength) {
+      typerGroup.userData.xpos = 0;
+      typerGroup.userData.ypos += 1;
+      xypos = this.getXYposition(typerGroup, 0, ypos + 1);
+    } else {
+      xypos = this.getXYposition(typerGroup, xpos, ypos);
+    }
+    const cursor = typerGroup.userData.cursor;
+    console.log(cursor.position);
+    // cursor.position.x = xypos.x;
+    cursor.translateX(xypos.x - cursor.position.x)
+    cursor.translateY(xypos.y - cursor.position.y)
+    console.log(xypos.y - cursor.position.y);
+    // cursor.position.y = xypos.y;
 
   }
+  getXYposition(typerGroup, xpos, ypos) {
+    
+    const lineOffset = -ypos * 28;
+    const outYpos = lineOffset + 50;
+    const outXpos = (typerGroup.userData.charWidth + typerGroup.userData.spacing) * xpos - 150;
+    console.log(outXpos, outYpos);
+    return {x: outXpos, y: outYpos};
+  }
   updateTyper(typerGroup: THREE.Group, frame) {
-    if (frame % 10 === 0 && !typerGroup.userData.done) {
+    const generateAllAtOnce = true;
+    if (generateAllAtOnce) {
+      while (!typerGroup.userData.done) {
+        this.addLetter(typerGroup);
+      }
+    }
+    if (frame % 30 === 0 && !typerGroup.userData.done) {
       this.addLetter(typerGroup);
     }
-
+    const cursorBlinkRate = 15;
+    if (frame % cursorBlinkRate === 0) {
+      typerGroup.userData.cursor.visible = !typerGroup.userData.cursor.visible;
+    }
   }
   generateCharacter(character) {
     const characterMap = this.getCharacterMap(character);
@@ -176,9 +197,9 @@ export class ChunkytextService {
       i: [[null, null, null],
         [{fill: notch, rotation: 1}, null, {fill: notch, rotation: 3}],
         [null, null, null]],
-      j: [[null, null, null],
-        [{fill: shave, rotation: 2}, null, {fill: shave, rotation: 2}],
-        [{fill: corner, rotation: 3}, {fill: corner, rotation: 2}, {fill: blank}]],
+      j: [[{fill: blank}, null, null],
+        [{fill: blank, rotation: 2}, null, null],
+        [{fill: corner, rotation: 3},null,  {fill: corner, rotation: 2}]],
       k: [[null, {fill: notch}, null],
         [null, null, {fill: notch, rotation: 3}],
         [null, {fill: notch, rotation: 2}, null]],
@@ -198,8 +219,8 @@ export class ChunkytextService {
         [null, null, {fill: notch, rotation: 1}],
         [null, null, {fill: blank}]],
       q: [[{fill: corner}, null,  null],
-        [null, null,  {fill: notch, rotation: 3}],
-        [{fill: corner, rotation: 1}, {fill: notch}, {fill: corner, rotation: 1}]],
+        [null, {fill: corner},  {fill: notch, rotation: 3}],
+        [{fill: corner, rotation: 1}, {fill: corner, rotation: 2}, {fill: corner, rotation: 1}]],
       r: [[null, {fill: notch, rotation: 2}, null],
         [null, null, {fill: notch, rotation: 3}],
         [null, null, {fill: corner, rotation: 1}]],
@@ -225,8 +246,8 @@ export class ChunkytextService {
         [null, null, null],
         [{fill: blank}, null, {fill: blank}]],
       z: [[null, null, {fill: corner, rotation: 3}],
-        [{fill: shave}, null, null],
-        [{fill: corner, rotation: 1}, null, {fill: notch, rotation: 3}]],
+        [{fill: shave}, null, ],
+        [{fill: corner, rotation: 1}, null, {fill: corner, rotation: 3}]],
       0: [[{fill: corner}],
         [null, {fill: corner}],
         []],
@@ -269,7 +290,8 @@ export class ChunkytextService {
         [{fill: blank}, {fill: blank}, {fill: blank}]],
       '-': [[{fill: blank}, {fill: blank}, {fill: blank}],
         [{fill: corner}, null, {fill: corner, rotation: 2}],
-        [{fill: blank}, {fill: blank}, {fill: blank}]]
+        [{fill: blank}, {fill: blank}, {fill: blank}]],
+      '█': [[], [], []]
     };
     return charactersMap[character];
   }
